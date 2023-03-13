@@ -1,0 +1,18 @@
+{
+  "name": "destiny-manifest-cloudflare-worker-kv",
+  "version": "0.0.0",
+  "description": "GitHub action that syncs the latest Destiny 2 manifest to a specific Cloudflare Workers KV store",
+  "private": true,
+  "scripts": {
+    "download-manifest-data": "rm -rf bulk-data && node scripts/download-manifest-data.mjs",
+    "download-manifest-data-local": "rm -rf bulk-data && node -r dotenv/config scripts/download-manifest-data.mjs",
+    "sync-kv": "./scripts/sync-kv.sh"
+  },
+  "dependencies": {
+    "bungie-api-ts": "^4.22.2",
+    "dotenv": "^16.0.3",
+    "wrangler": "^2.12.2"
+  },
+  "author": "meyer",
+  "manifestHash": "1acc6e017eba87c2c861bde515744aac"
+}

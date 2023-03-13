@@ -1,0 +1,107 @@
+name: Sync Destiny manifest KV store
+
+on:
+  workflow_dispatch:
+
+env:
+  CACHE_FOLDER_PATH: bulk-data
+
+jobs:
+  check-manifest:
+    name: Manifest check
+    runs-on: ubuntu-latest
+
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.jsonFiles }}
+      cache-key: ${{ steps.manifest.outputs.definition-cache-key }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Use Node 18
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: "npm"
+
+      - name: Install node dependencies
+        run: npm install --no-audit
+
+      - name: Get latest manifest
+        id: manifest
+        env:
+          MANIFEST_API_URL: https://www.bungie.net/Platform/Destiny2/Manifest/
+        run: |
+          curl -H "x-api-key: ${{ secrets.BUNGIE_API_KEY }}" "${{ env.MANIFEST_API_URL }}" -o manifest.json
+          MANIFEST_VERSION=$(cat manifest.json | jq -r .Response.version)
+          CACHE_KEY_SUFFIX=${{ hashFiles('manifest.json') }}
+          echo "definition-cache-key=manifest-$MANIFEST_VERSION-$CACHE_KEY_SUFFIX" >> $GITHUB_OUTPUT
+          echo "### Latest manifest version: $MANIFEST_VERSION :sparkles:" >> $GITHUB_STEP_SUMMARY
+
+      - name: Check cache for manifest
+        id: manifest-cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.CACHE_FOLDER_PATH }}
+          key: ${{ steps.manifest.outputs.definition-cache-key }}
+
+      - name: Print nice message if we’ve already cached definitions
+        if: steps.manifest-cache.outputs.cache-hit == 'true'
+        run: |
+          echo "✅ Manifest cache is up to date" >> $GITHUB_STEP_SUMMARY
+
+      - name: Generate bulk JSON files for upload if the manifest is out of date
+        if: steps.manifest-cache.outputs.cache-hit != 'true'
+        env:
+          BUNGIE_API_KEY: ${{ secrets.BUNGIE_API_KEY }}
+          SERVER_URL: ${{ secrets.SERVER_URL }}
+        run: |
+          echo "::warning::Manifest cache is out of date, updating…"
+          npm run --silent download-manifest-data >> $GITHUB_STEP_SUMMARY
+          echo "::notice::Manifest cache updated!"
+
+      - name: Set `jsonFiles` output value
+        id: set-matrix
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs').promises;
+            const jsonFiles = await fs.readdir(process.env.CACHE_FOLDER_PATH);
+            core.setOutput('jsonFiles', JSON.stringify(jsonFiles));
+
+  sync-manifest:
+    name: Upload `${{ matrix.jsonFile }}` to definitions KV store
+    needs: check-manifest
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        jsonFile: ${{ fromJson(needs.check-manifest.outputs.matrix )}}
+
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+    steps:
+      - name: Use Node 18
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install wrangler CLI
+        run: npm install -g wrangler
+
+      - name: Fetch latest cached manifest data
+        id: manifest-cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.CACHE_FOLDER_PATH }}
+          key: ${{ needs.check-manifest.outputs.cache-key }}
+
+      - name: Upload ${{ matrix.jsonFile }}
+        if: steps.manifest-cache.outputs.cache-hit == 'true'
+        run: wrangler kv:bulk put --namespace-id 8115761ab4e8442d9a0dbe15ff603838 "${{ env.CACHE_FOLDER_PATH }}/${{ matrix.jsonFile }}"
+
+      - name: Show an error if the cache missed
+        if: steps.manifest-cache.outputs.cache-hit != 'true'
+        run: echo "Cache miss!"
