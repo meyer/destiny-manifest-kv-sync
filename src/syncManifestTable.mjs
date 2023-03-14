@@ -1,5 +1,3 @@
-// @ts-check
-
 import core from "@actions/core";
 import { getDestinyManifestComponent } from "bungie-api-ts/destiny2";
 import { bungieHttpClient } from "./bungieHttpClient.mjs";
@@ -56,7 +54,7 @@ try {
 
     const chunkCount = Math.ceil(kvItems.length / MAX_BULK_DATA_ITEMS);
 
-    const chunks = Array.from({ length: chunkCount }).map((unused, index) => {
+    const chunks = Array.from({ length: chunkCount }).map((_unused, index) => {
       return kvItems.slice(
         index * MAX_BULK_DATA_ITEMS,
         (index + 1) * MAX_BULK_DATA_ITEMS

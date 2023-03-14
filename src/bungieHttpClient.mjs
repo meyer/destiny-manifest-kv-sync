@@ -1,5 +1,3 @@
-// @ts-check
-
 import { PlatformErrorCodes } from "bungie-api-ts/destiny2";
 import core from "@actions/core";
 import { getThingOrThrow } from "./utils.mjs";

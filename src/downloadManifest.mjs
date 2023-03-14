@@ -1,5 +1,3 @@
-// @ts-check
-
 import cache from "@actions/cache";
 import core from "@actions/core";
 import { getDestinyManifest } from "bungie-api-ts/destiny2";
@@ -17,6 +15,8 @@ const skippedTables = [
 ];
 
 const tableNameRegex = /^Destiny(.+)Definition$/;
+
+/** @param {string} tableName */
 const getShortTableName = (tableName) =>
   tableNameRegex.exec(tableName)?.[1] || tableName;
 
@@ -65,7 +65,7 @@ try {
   const chunkSize = Math.ceil(tableNames.length / shardCount);
 
   const tableData = Object.entries(
-    tableNames.reduce((prev, tableName, index, items) => {
+    tableNames.reduce((prev, tableName, index) => {
       // one-based
       const shardIndex = Math.ceil((index + 1) / chunkSize);
       const shardName = `Shard ${shardIndex}`;
@@ -102,6 +102,5 @@ try {
   core.setOutput("manifest-version", manifestVersion);
   core.setOutput("matrix", { include: tableData });
 } catch (error) {
-  console.error(error);
   core.setFailed(error.message + (error.stack ? "\n\n" + error.stack : ""));
 }
