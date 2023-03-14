@@ -97,5 +97,6 @@ try {
 
   await Promise.all(tablePromises);
 } catch (error) {
+  console.error(error);
   core.setFailed(error.message + (error.stack ? "\n\n" + error.stack : ""));
 }

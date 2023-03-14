@@ -16,13 +16,16 @@ const skippedTables = [
   "DestinyInventoryItemLiteDefinition",
 ];
 
-const cacheDirName = "manifest-cache";
-
 const tableNameRegex = /^Destiny(.+)Definition$/;
 const getShortTableName = (tableName) =>
   tableNameRegex.exec(tableName)?.[1] || tableName;
 
 try {
+  const cacheDirName = getThingOrThrow(
+    process.env.CACHE_PATH,
+    "Could not get CACHE_PATH from environment"
+  );
+
   const shardCountString = getThingOrThrow(
     process.env.SHARD_COUNT,
     "Could not get SHARD_COUNT from environment"
@@ -88,10 +91,17 @@ try {
     await cache.saveCache([cacheDirName], cacheKey);
   }
 
-  core.setOutput("cache-hit", !!cacheResult);
+  const cacheStatus = cacheResult ? "hit" : "miss";
+
+  core.info("Cache status: " + cacheStatus);
+  core.info("Cache key: " + cacheKey);
+  core.info("Manifest version: " + manifestVersion);
+
+  core.setOutput("cache-status", cacheStatus);
   core.setOutput("cache-key", cacheKey);
   core.setOutput("manifest-version", manifestVersion);
   core.setOutput("matrix", { include: tableData });
 } catch (error) {
+  console.error(error);
   core.setFailed(error.message + (error.stack ? "\n\n" + error.stack : ""));
 }

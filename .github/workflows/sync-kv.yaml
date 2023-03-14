@@ -10,6 +10,9 @@ on:
         required: true
         default: "10"
 
+env:
+  CACHE_PATH: manifest-cache
+
 jobs:
   check-manifest:
     name: Manifest check
@@ -18,6 +21,7 @@ jobs:
     outputs:
       matrix: ${{ steps.manifest.outputs.matrix }}
       cache-key: ${{ steps.manifest.outputs.cache-key }}
+      cache-status: ${{ steps.manifest.outputs.cache-status }}
 
     steps:
       - uses: actions/checkout@v3
@@ -28,7 +32,7 @@ jobs:
           node-version: 18
           cache: "npm"
 
-      - name: Install NPM dependencies
+      - name: Install node dependencies
         run: npm install --no-audit
 
       - name: Set required actions environment variables
@@ -52,12 +56,10 @@ jobs:
     name: ${{ matrix.name }}
     needs: check-manifest
     runs-on: ubuntu-latest
+    if: needs.check-manifest.outputs.cache-status == 'miss'
 
     strategy:
       matrix: ${{ fromJSON(needs.check-manifest.outputs.matrix )}}
-
-    env:
-      CACHE_PATH: manifest-cache
 
     steps:
       - uses: actions/checkout@v3
@@ -68,7 +70,7 @@ jobs:
           node-version: 18
           cache: "npm"
 
-      - name: Install NPM dependencies
+      - name: Install node dependencies
         run: npm install --no-audit
 
       - name: Restore manifest from cache
