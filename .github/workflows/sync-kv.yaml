@@ -9,6 +9,13 @@ on:
         type: string
         required: true
         default: "10"
+  schedule:
+    # every minute from 8am-4pm PST
+    - cron: "* 15-23 * * *"
+    # every minute from 4pm-8pm PST
+    - cron: "* 0-4 * * *"
+    # every five minutes all other times
+    - cron: "*/5 5-14 * * *"
 
 env:
   CACHE_PATH: manifest-cache
