@@ -9,6 +9,11 @@ on:
         type: string
         required: true
         default: "10"
+      forceSync:
+        description: "Force KV sync"
+        type: boolean
+        required: false
+        default: false
   schedule:
     # every minute from 8am-4pm PST
     - cron: "* 15-23 * * *"
@@ -63,7 +68,7 @@ jobs:
     name: ${{ matrix.name }}
     needs: check-manifest
     runs-on: ubuntu-latest
-    if: needs.check-manifest.outputs.cache-status == 'miss'
+    if: needs.check-manifest.outputs.cache-status == 'miss' || inputs.forceSync
 
     strategy:
       matrix: ${{ fromJSON(needs.check-manifest.outputs.matrix )}}

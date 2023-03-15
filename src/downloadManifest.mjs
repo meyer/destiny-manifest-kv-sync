@@ -14,6 +14,17 @@ const skippedTables = [
   "DestinyInventoryItemLiteDefinition",
 ];
 
+// these babies deserve their own job
+const knownMassiveTables = [
+  "DestinyRewardMappingDefinition", // 6346
+  "DestinyCollectibleDefinition", // 7576
+  "DestinyObjectiveDefinition", // 7837
+  "DestinyUnlockExpressionMappingDefinition", // 10182
+  "DestinyUnlockValueDefinition", // 10505
+  "DestinyInventoryItemDefinition", // 21661
+  "DestinyUnlockDefinition", // 35468
+];
+
 const tableNameRegex = /^Destiny(.+)Definition$/;
 
 /** @param {string} tableName */
@@ -30,7 +41,7 @@ try {
     process.env.SHARD_COUNT,
     "Could not get SHARD_COUNT from environment"
   );
-  const shardCount = parseInt(shardCountString, 10);
+  const maxShardCount = parseInt(shardCountString, 10);
 
   core.info("Fetching manifest…");
   const manifest = await getDestinyManifest(bungieHttpClient);
@@ -58,29 +69,38 @@ try {
         core.debug("Skipping table " + tableName);
         return false;
       }
+      if (knownMassiveTables.includes(tableName)) {
+        core.debug("Table " + tableName + " will be handled separately");
+        return false;
+      }
       return true;
     })
     .sort();
 
+  const shardCount = Math.max(maxShardCount - knownMassiveTables.length, 1);
   const chunkSize = Math.ceil(tableNames.length / shardCount);
 
-  const tableData = Object.entries(
+  const tableData = Object.values(
     tableNames.reduce((prev, tableName, index) => {
       // one-based
       const shardIndex = Math.ceil((index + 1) / chunkSize);
-      const shardName = `Shard ${shardIndex}`;
-      (prev[shardName] = prev[shardName] || []).push(tableName);
+      (prev[shardIndex] = prev[shardIndex] || []).push(tableName);
       return prev;
     }, /** @type {Record<string, string[]>} */ ({}))
-  ).map(([name, tables]) => ({
+  ).map((tables) => ({
     name:
-      name +
-      ": " +
       getShortTableName(tables[0]) +
       "-" +
       getShortTableName(tables[tables.length - 1]),
     tables: JSON.stringify(tables),
   }));
+
+  for (const tableName of knownMassiveTables) {
+    tableData.push({
+      name: getShortTableName(tableName),
+      tables: JSON.stringify([tableName]),
+    });
+  }
 
   if (!cacheResult) {
     await fs.mkdir(cacheDirName, { recursive: true });
