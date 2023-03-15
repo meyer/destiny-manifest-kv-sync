@@ -52,7 +52,7 @@ try {
       );
 
       for (const [entryHash, entry] of resultEntries) {
-        const chunkIndex = Math.floor(++itemCount / MAX_BULK_DATA_ITEMS);
+        const chunkIndex = Math.floor(itemCount++ / MAX_BULK_DATA_ITEMS);
         const kvItems = (chunksByIndex[chunkIndex] =
           chunksByIndex[chunkIndex] || []);
         kvItems.push({
