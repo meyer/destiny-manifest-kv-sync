@@ -3,37 +3,14 @@ name: Sync Destiny manifest to KV store
 on:
   push:
   workflow_dispatch:
-    inputs:
-      shardCount:
-        description: "Shard count"
-        type: string
-        required: true
-        default: "10"
-      forceSync:
-        description: "Force KV sync"
-        type: boolean
-        required: false
-        default: false
-  schedule:
-    # every five minutes from 8am-4pm PST
-    - cron: "*/5 15-23 * * *"
-    # every five minutes from 4pm-8pm PST
-    - cron: "*/5 0-4 * * *"
-    # every fifteen minutes all other times
-    - cron: "*/15 5-14 * * *"
 
 env:
   CACHE_PATH: manifest-cache
 
 jobs:
   check-manifest:
-    name: Manifest check
+    name: Download and sync
     runs-on: ubuntu-latest
-
-    outputs:
-      matrix: ${{ steps.manifest.outputs.matrix }}
-      cache-key: ${{ steps.manifest.outputs.cache-key }}
-      cache-status: ${{ steps.manifest.outputs.cache-status }}
 
     steps:
       - uses: actions/checkout@v3
@@ -54,49 +31,16 @@ jobs:
           script: |
             core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL);
             core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN);
-      - name: Get latest manifest
+
+      - name: Do the deed
         id: manifest
         env:
           ACTIONS_CACHE_URL: ${{ env.ACTIONS_CACHE_URL }}
           ACTIONS_RUNTIME_TOKEN: ${{ env.ACTIONS_RUNTIME_TOKEN }}
           BUNGIE_API_KEY: ${{ secrets.BUNGIE_API_KEY }}
-          SERVER_URL: ${{ secrets.SERVER_URL }}
-          SHARD_COUNT: ${{ inputs.shardCount || '10' }}
-        run: node src/downloadManifest.mjs
-
-  sync-manifest:
-    name: ${{ matrix.name }}
-    needs: check-manifest
-    runs-on: ubuntu-latest
-    if: needs.check-manifest.outputs.cache-status == 'miss' || inputs.forceSync
-
-    strategy:
-      matrix: ${{ fromJSON(needs.check-manifest.outputs.matrix )}}
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Use Node 18
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
-          cache: "npm"
-
-      - name: Install node dependencies
-        run: npm install --no-audit
-
-      - name: Restore manifest from cache
-        uses: actions/cache@v3
-        with:
-          path: ${{ env.CACHE_PATH }}
-          key: ${{ needs.check-manifest.outputs.cache-key }}
-
-      - name: Sync tables to KV store
-        env:
-          BUNGIE_API_KEY: ${{ secrets.BUNGIE_API_KEY }}
-          SERVER_URL: ${{ secrets.SERVER_URL }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_NAMESPACE_ID: ${{ secrets.CLOUDFLARE_NAMESPACE_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          MANIFEST_TABLES: ${{ matrix.tables }}
-        run: node src/syncManifestTable.mjs
+          CLOUDFLARE_NAMESPACE_ID: ${{ secrets.CLOUDFLARE_NAMESPACE_ID }}
+          SERVER_URL: ${{ secrets.SERVER_URL }}
+
+        run: node src/downloadManifest.mjs

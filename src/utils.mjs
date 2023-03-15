@@ -26,3 +26,12 @@ export const getThingOrThrow = (thing, message = "Could not get thing") => {
   }
   return thing;
 };
+
+/** @type {<T>(items: T[], chunkSize: number) => T[][]} */
+export const sliceThingIntoChunks = (items, chunkSize) => {
+  const totalItems = items.length;
+  const numChunks = Math.ceil(totalItems / chunkSize);
+  return Array.from({ length: numChunks }).map((_, index) =>
+    items.slice(index * chunkSize, (index + 1) * chunkSize)
+  );
+};
