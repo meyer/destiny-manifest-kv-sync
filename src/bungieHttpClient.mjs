@@ -1,11 +1,11 @@
-import { PlatformErrorCodes } from "bungie-api-ts/destiny2";
 import core from "@actions/core";
+import { PlatformErrorCodes } from "bungie-api-ts/destiny2";
 import { getThingOrThrow } from "./utils.mjs";
 
 export class BungieAPIError extends Error {
   constructor(
     /** @type {import('bungie-api-ts/destiny2').ServerResponse<any>} */
-    response
+    response,
   ) {
     super(response.ErrorCode + " " + response.ErrorStatus);
     this.response = response;
@@ -19,17 +19,17 @@ export class BungieAPIError extends Error {
 export const bungieHttpClient = async (config) => {
   const BUNGIE_API_KEY = getThingOrThrow(
     process.env.BUNGIE_API_KEY,
-    "process.env.BUNGIE_API_KEY is not set"
+    "process.env.BUNGIE_API_KEY is not set",
   );
   const SERVER_URL = getThingOrThrow(
     process.env.SERVER_URL,
-    "process.env.SERVER_URL is not set"
+    "process.env.SERVER_URL is not set",
   );
 
   const url = new URL(config.url);
   if (config.params) {
-    for (const key in config.params) {
-      url.searchParams.set(key, config.params[key]);
+    for (const [key, value] of Object.entries(config.params)) {
+      url.searchParams.set(key, value);
     }
   }
 
@@ -46,7 +46,7 @@ export const bungieHttpClient = async (config) => {
     body: config.body ? JSON.stringify(config.body) : undefined,
   });
 
-  /** @type {import('bungie-api-ts/destiny2').ServerResponse<any>} */
+  /** @type {any} */
   let result;
 
   try {

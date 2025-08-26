@@ -5,11 +5,13 @@
   "author": "meyer",
   "private": true,
   "dependencies": {
-    "@actions/cache": "^3.2.1",
-    "@actions/core": "^1.10.0",
-    "bungie-api-ts": "^4.22.2"
+    "@actions/cache": "^4.0.5",
+    "@actions/core": "^1.11.1",
+    "bungie-api-ts": "^5.7.0"
   },
   "devDependencies": {
-    "@types/node": "^18"
-  }
+    "@biomejs/biome": "^2.2.2",
+    "@types/node": "^22"
+  },
+  "packageManager": "pnpm@10.15.0"
 }

@@ -1,3 +1,7 @@
+import { createHash } from "node:crypto";
+import { promises as fs } from "node:fs";
+import path from "node:path";
+import { format } from "node:util";
 import cache from "@actions/cache";
 import core from "@actions/core";
 import {
@@ -5,11 +9,7 @@ import {
   getDestinyManifestComponent,
 } from "bungie-api-ts/destiny2";
 import { bungieHttpClient } from "./bungieHttpClient.mjs";
-import { createHash } from "crypto";
 import { getThingOrThrow, invariant, sliceThingIntoChunks } from "./utils.mjs";
-import { promises as fs } from "fs";
-import path from "path";
-import { format } from "util";
 
 const MAX_BULK_DATA_ITEMS = 10000;
 const BULK_PUT_CHUNK_SIZE = MAX_BULK_DATA_ITEMS / 5;
@@ -20,7 +20,7 @@ const cloudflareKVBulkPut = async (items) => {
     format(
       "https://api.cloudflare.com/client/v4/accounts/%s/storage/kv/namespaces/%s/bulk",
       process.env.CLOUDFLARE_ACCOUNT_ID,
-      process.env.CLOUDFLARE_NAMESPACE_ID
+      process.env.CLOUDFLARE_NAMESPACE_ID,
     ),
     {
       method: "PUT",
@@ -29,7 +29,7 @@ const cloudflareKVBulkPut = async (items) => {
         Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
       },
       body: JSON.stringify(items),
-    }
+    },
   );
 
   const responseText = await response.text();
@@ -62,8 +62,8 @@ const uploadBatchToCloudflareKV = async (values) => {
       async (chunk, index) => {
         console.log("Batch %d: %d items", index + 1, chunk.length);
         await cloudflareKVBulkPut(chunk);
-      }
-    )
+      },
+    ),
   );
 };
 
@@ -77,12 +77,12 @@ const skippedTables = [
 try {
   const cacheDirName = getThingOrThrow(
     process.env.CACHE_PATH,
-    "Could not get CACHE_PATH from environment"
+    "Could not get CACHE_PATH from environment",
   );
 
   console.info("Fetching manifest…");
   const manifest = await getDestinyManifest(bungieHttpClient).then(
-    (value) => value.Response
+    (value) => value.Response,
   );
   const manifestVersion = manifest.version;
 
@@ -99,7 +99,7 @@ try {
     [cacheDirName],
     cacheKey,
     undefined,
-    { lookupOnly: true }
+    { lookupOnly: true },
   );
 
   /** @type {Array<keyof import("bungie-api-ts/destiny2").AllDestinyManifestComponents>} */
@@ -139,12 +139,14 @@ try {
         "Table %s contains %s entr%s",
         tableName,
         resultEntries.length,
-        resultEntries.length === 1 ? "y" : "ies"
+        resultEntries.length === 1 ? "y" : "ies",
       );
-    })
+    }),
   );
 
-  tableInfo.forEach((l) => console.log(l));
+  for (const l of tableInfo) {
+    console.log(l);
+  }
 
   const chunks = sliceThingIntoChunks(kvItems, MAX_BULK_DATA_ITEMS);
 
@@ -156,7 +158,7 @@ try {
       chunkIndex + 1,
       chunks.length,
       startNum + 1,
-      startNum + chunk.length
+      startNum + chunk.length,
     );
     console.time(timeLabel);
     await uploadBatchToCloudflareKV(chunk);
@@ -169,10 +171,14 @@ try {
     await fs.mkdir(cacheDirName, { recursive: true });
     await fs.writeFile(
       path.join(cacheDirName, "manifest.json"),
-      JSON.stringify(manifest, null, 2)
+      JSON.stringify(manifest, null, 2),
     );
     await cache.saveCache([cacheDirName], cacheKey);
   }
 } catch (error) {
-  core.setFailed(error.message + (error.stack ? "\n\n" + error.stack : ""));
+  core.setFailed(
+    /** @type {any} */ (error).message + /** @type {any} */ (error).stack
+      ? "\n\n" + /** @type {any} */ (error).stack
+      : "",
+  );
 }

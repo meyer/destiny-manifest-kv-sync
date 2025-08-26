@@ -13,16 +13,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - name: Use Node 18
-        uses: actions/setup-node@v3
+      - uses: pnpm/action-setup@v4
         with:
-          node-version: 18
-          cache: "npm"
+          run_install: false
 
-      - name: Install node dependencies
-        run: npm install --no-audit
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - run: pnpm install
 
       - name: Set required actions environment variables
         uses: actions/github-script@v6
