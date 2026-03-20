@@ -29,7 +29,7 @@ jobs:
       - name: Check if already synced
         id: cache
         if: github.event_name == 'push'
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: .manifest-synced
           key: manifest-${{ steps.manifest.outputs.version }}
@@ -44,7 +44,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v5
         if: steps.cache.outputs.cache-hit != 'true'
 
       - uses: actions/setup-node@v6
@@ -73,7 +73,7 @@ jobs:
           mkdir -p .manifest-synced
           echo "${{ steps.manifest.outputs.version }}" > .manifest-synced/version
 
-      - uses: actions/cache/save@v4
+      - uses: actions/cache/save@v5
         if: steps.cache.outputs.cache-hit != 'true' && github.event_name != 'pull_request_target'
         with:
           path: .manifest-synced
