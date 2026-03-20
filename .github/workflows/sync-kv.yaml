@@ -13,13 +13,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v5
         with:
           run_install: false
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: "pnpm"
@@ -27,7 +27,7 @@ jobs:
       - run: pnpm install
 
       - name: Set required actions environment variables
-        uses: actions/github-script@v6
+        uses: actions/github-script@v8
         id: env
         with:
           script: |
