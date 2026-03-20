@@ -1,4 +1,4 @@
-import core from "@actions/core";
+import { info } from "@actions/core";
 import { PlatformErrorCodes } from "bungie-api-ts/destiny2";
 import { getThingOrThrow } from "./utils.mjs";
 
@@ -35,7 +35,7 @@ export const bungieHttpClient = async (config) => {
 
   const urlString = url.toString();
 
-  core.info(`${config.method} ${urlString}`);
+  info(`${config.method} ${urlString}`);
 
   const response = await fetch(urlString, {
     method: config.method,

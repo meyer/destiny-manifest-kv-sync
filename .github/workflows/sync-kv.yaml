@@ -2,47 +2,74 @@ name: Sync Destiny manifest to KV store
 
 on:
   push:
+    branches: [main]
+  pull_request:
   workflow_dispatch:
 
-env:
-  CACHE_PATH: manifest-cache
-
 jobs:
-  check-manifest:
+  sync-manifest:
     name: Download and sync
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - name: Get manifest version
+        id: manifest
+        env:
+          BUNGIE_API_KEY: ${{ secrets.BUNGIE_API_KEY }}
+          SERVER_URL: ${{ secrets.SERVER_URL }}
+        run: |
+          version=$(curl -sf -H "X-API-Key: $BUNGIE_API_KEY" -H "Origin: $SERVER_URL" \
+            https://www.bungie.net/Platform/Destiny2/Manifest/ | jq -r '.Response.version')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Current manifest version: $version"
 
-      - uses: pnpm/action-setup@v5
+      - name: Check if already synced
+        id: cache
+        if: github.event_name == 'push'
+        uses: actions/cache@v4
         with:
-          run_install: false
+          path: .manifest-synced
+          key: manifest-${{ steps.manifest.outputs.version }}
+          lookup-only: true
+
+      - name: Skip (already synced)
+        if: steps.cache.outputs.cache-hit == 'true'
+        run: echo "Manifest ${{ steps.manifest.outputs.version }} already synced, skipping"
+
+      - uses: actions/checkout@v6
+        if: steps.cache.outputs.cache-hit != 'true'
+
+      - uses: pnpm/action-setup@v4
+        if: steps.cache.outputs.cache-hit != 'true'
 
       - uses: actions/setup-node@v6
+        if: steps.cache.outputs.cache-hit != 'true'
         with:
-          node-version: 22
+          node-version-file: .node-version
           cache: "pnpm"
 
       - run: pnpm install
+        if: steps.cache.outputs.cache-hit != 'true'
 
-      - name: Set required actions environment variables
-        uses: actions/github-script@v8
-        id: env
-        with:
-          script: |
-            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL);
-            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN);
-
-      - name: Do the deed
-        id: manifest
+      - name: Sync manifest
+        if: steps.cache.outputs.cache-hit != 'true'
         env:
-          ACTIONS_CACHE_URL: ${{ env.ACTIONS_CACHE_URL }}
-          ACTIONS_RUNTIME_TOKEN: ${{ env.ACTIONS_RUNTIME_TOKEN }}
+          DRY_RUN: ${{ github.event_name == 'pull_request' && 'true' || '' }}
           BUNGIE_API_KEY: ${{ secrets.BUNGIE_API_KEY }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_NAMESPACE_ID: ${{ secrets.CLOUDFLARE_NAMESPACE_ID }}
           SERVER_URL: ${{ secrets.SERVER_URL }}
-
         run: node src/downloadManifest.mjs
+
+      - name: Mark as synced
+        if: steps.cache.outputs.cache-hit != 'true' && github.event_name != 'pull_request'
+        run: |
+          mkdir -p .manifest-synced
+          echo "${{ steps.manifest.outputs.version }}" > .manifest-synced/version
+
+      - uses: actions/cache/save@v4
+        if: steps.cache.outputs.cache-hit != 'true' && github.event_name != 'pull_request'
+        with:
+          path: .manifest-synced
+          key: manifest-${{ steps.manifest.outputs.version }}

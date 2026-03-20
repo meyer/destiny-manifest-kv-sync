@@ -1,9 +1,5 @@
-import { createHash } from "node:crypto";
-import { promises as fs } from "node:fs";
-import path from "node:path";
 import { format } from "node:util";
-import cache from "@actions/cache";
-import core from "@actions/core";
+import { setFailed } from "@actions/core";
 import {
   getDestinyManifest,
   getDestinyManifestComponent,
@@ -13,6 +9,7 @@ import { getThingOrThrow, invariant, sliceThingIntoChunks } from "./utils.mjs";
 
 const MAX_BULK_DATA_ITEMS = 10000;
 const BULK_PUT_CHUNK_SIZE = MAX_BULK_DATA_ITEMS / 5;
+const DRY_RUN = !!process.env.DRY_RUN;
 
 /** @param {unknown[]} items */
 const cloudflareKVBulkPut = async (items) => {
@@ -56,7 +53,6 @@ const cloudflareKVBulkPut = async (items) => {
 
 /** @param {unknown[]} values */
 const uploadBatchToCloudflareKV = async (values) => {
-  // split the batch of 10K items into smaller chunks
   await Promise.all(
     sliceThingIntoChunks(values, BULK_PUT_CHUNK_SIZE).map(
       async (chunk, index) => {
@@ -75,10 +71,9 @@ const skippedTables = [
 ];
 
 try {
-  const cacheDirName = getThingOrThrow(
-    process.env.CACHE_PATH,
-    "Could not get CACHE_PATH from environment",
-  );
+  if (DRY_RUN) {
+    console.info("Running in dry run mode — will not upload to KV");
+  }
 
   console.info("Fetching manifest…");
   const manifest = await getDestinyManifest(bungieHttpClient).then(
@@ -89,18 +84,6 @@ try {
   console.info("Current manifest version: " + manifestVersion);
   const enPaths = manifest.jsonWorldComponentContentPaths.en;
   invariant(enPaths, "No en paths in jsonWorldComponentContentPaths");
-
-  const manifestHash = createHash("md5")
-    .update(JSON.stringify(manifest))
-    .digest("hex");
-
-  const cacheKey = manifestVersion + "__" + manifestHash;
-  const cacheResult = await cache.restoreCache(
-    [cacheDirName],
-    cacheKey,
-    undefined,
-    { lookupOnly: true },
-  );
 
   /** @type {Array<keyof import("bungie-api-ts/destiny2").AllDestinyManifestComponents>} */
   const tableNames = /** @type {any} */ (
@@ -148,35 +131,31 @@ try {
     console.log(l);
   }
 
-  const chunks = sliceThingIntoChunks(kvItems, MAX_BULK_DATA_ITEMS);
+  console.info("Total KV items: %d", kvItems.length);
 
-  let chunkIndex = 0;
-  for (const chunk of chunks) {
-    const startNum = chunkIndex * MAX_BULK_DATA_ITEMS;
-    const timeLabel = format(
-      "%d of %d: items %d-%d",
-      chunkIndex + 1,
-      chunks.length,
-      startNum + 1,
-      startNum + chunk.length,
-    );
-    console.time(timeLabel);
-    await uploadBatchToCloudflareKV(chunk);
-    console.timeEnd(timeLabel);
-    chunkIndex++;
-  }
+  if (DRY_RUN) {
+    console.info("Dry run complete — skipping KV upload");
+  } else {
+    const chunks = sliceThingIntoChunks(kvItems, MAX_BULK_DATA_ITEMS);
 
-  if (!cacheResult) {
-    console.info("Cache miss, saving manifest with key", cacheKey);
-    await fs.mkdir(cacheDirName, { recursive: true });
-    await fs.writeFile(
-      path.join(cacheDirName, "manifest.json"),
-      JSON.stringify(manifest, null, 2),
-    );
-    await cache.saveCache([cacheDirName], cacheKey);
+    let chunkIndex = 0;
+    for (const chunk of chunks) {
+      const startNum = chunkIndex * MAX_BULK_DATA_ITEMS;
+      const timeLabel = format(
+        "%d of %d: items %d-%d",
+        chunkIndex + 1,
+        chunks.length,
+        startNum + 1,
+        startNum + chunk.length,
+      );
+      console.time(timeLabel);
+      await uploadBatchToCloudflareKV(chunk);
+      console.timeEnd(timeLabel);
+      chunkIndex++;
+    }
   }
 } catch (error) {
-  core.setFailed(
+  setFailed(
     /** @type {any} */ (error).message + /** @type {any} */ (error).stack
       ? "\n\n" + /** @type {any} */ (error).stack
       : "",
