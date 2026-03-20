@@ -15,8 +15,8 @@ importers:
         specifier: ^1.11.1
         version: 1.11.1
       bungie-api-ts:
-        specifier: ^5.7.0
-        version: 5.7.0
+        specifier: ^5.10.0
+        version: 5.10.0
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.2.2
@@ -191,8 +191,8 @@ packages:
   brace-expansion@1.1.12:
     resolution: {integrity: sha512-9T9UjW3r0UW5c1Q7GTwllptXwhvYmEzFhzMfZ9H7FQWt+uZePjZPjBP/W1ZEyZ1twGWom5/56TF4lPcqjnDHcg==}
 
-  bungie-api-ts@5.7.0:
-    resolution: {integrity: sha512-ev+NPfOqUkk9aVvrpYXamAgpDyg5Jl9/e2RJhZIsTTNYBCbupF6+cLGSqef0LwVTSBIjLuIU7wiNOOGUx+mqrQ==}
+  bungie-api-ts@5.10.0:
+    resolution: {integrity: sha512-3UJCuMJVRrfqUA23mpE/DJ79TWQqhRKuY3hLxUZpcTHQ9wOBWSk6Nyxugx231cIqfPsENnGT0OkBOvIB0s6C5g==}
     engines: {node: '>=13.2.0'}
 
   call-bind-apply-helpers@1.0.2:
@@ -609,7 +609,7 @@ snapshots:
       balanced-match: 1.0.2
       concat-map: 0.0.1
 
-  bungie-api-ts@5.7.0: {}
+  bungie-api-ts@5.10.0: {}
 
   call-bind-apply-helpers@1.0.2:
     dependencies:
