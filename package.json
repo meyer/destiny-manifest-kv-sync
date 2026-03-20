@@ -6,7 +6,7 @@
   "private": true,
   "dependencies": {
     "@actions/cache": "^4.0.5",
-    "@actions/core": "^1.11.1",
+    "@actions/core": "^3.0.0",
     "bungie-api-ts": "^5.7.0"
   },
   "devDependencies": {
