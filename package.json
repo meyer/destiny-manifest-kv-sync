@@ -9,8 +9,8 @@
     "bungie-api-ts": "^5.10.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.8",
-    "@types/node": "^22"
+    "@biomejs/biome": "^2.4.9",
+    "@types/node": "^25"
   },
   "packageManager": "pnpm@10.15.0"
 }
